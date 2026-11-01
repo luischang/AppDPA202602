@@ -1,15 +1,33 @@
 package dev.lchang.appdpa.presentation.apifootball
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.lchang.appdpa.data.local.AppDatabase
+import dev.lchang.appdpa.data.local.FavoriteTeamEntity
 import dev.lchang.appdpa.data.remote.apifootball.Country
 import dev.lchang.appdpa.data.remote.apifootball.RetrofitInstance
+import dev.lchang.appdpa.data.remote.apifootball.Team
 import dev.lchang.appdpa.data.remote.apifootball.TeamWrapper
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class ApiFootballViewModel: ViewModel(){
+class ApiFootballViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val db = AppDatabase.getDatabase(application)
+    private val favoriteTeamDao = db.favoriteTeamDao()
+
+    val favoriteTeamIds: StateFlow<Set<Int>> = favoriteTeamDao.getFavoriteIds()
+        .map { it.toSet() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptySet()
+        )
 
     private val _countries = MutableStateFlow<List<Country>>(emptyList())
     val countries: StateFlow<List<Country>> = _countries
@@ -25,6 +43,7 @@ class ApiFootballViewModel: ViewModel(){
     init {
         loadCountries()
     }
+
     fun loadCountries() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -40,7 +59,7 @@ class ApiFootballViewModel: ViewModel(){
         }
     }
 
-    fun loadTeamsByCountry(country: String){
+    fun loadTeamsByCountry(country: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
@@ -60,10 +79,24 @@ class ApiFootballViewModel: ViewModel(){
         loadTeamsByCountry(country.name)
     }
 
-
-
-
-
-
-
+    fun toggleFavorite(team: Team) {
+        viewModelScope.launch {
+            val isFav = favoriteTeamIds.value.contains(team.id)
+            if (isFav) {
+                favoriteTeamDao.deleteFavoriteById(team.id)
+            } else {
+                val entity = FavoriteTeamEntity(
+                    id = team.id,
+                    name = team.name,
+                    code = team.code,
+                    logo = team.logo,
+                    country = team.country,
+                    founded = team.founded,
+                    national = team.national,
+                    createdAt = System.currentTimeMillis()
+                )
+                favoriteTeamDao.insertFavorite(entity)
+            }
+        }
+    }
 }
