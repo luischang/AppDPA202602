@@ -1,8 +1,10 @@
 package dev.lchang.appdpa.presentation.auth
 
+import android.webkit.WebView
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +15,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +36,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import dev.lchang.appdpa.data.remote.FirebaseAuthManager
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +53,9 @@ fun RegisterScreen(navController: NavController) {
     var passwordVisible by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+
+    var acceptTerms by remember { mutableStateOf(false) }
+    var showTerms by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -128,6 +136,18 @@ fun RegisterScreen(navController: NavController) {
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+        //
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = acceptTerms,
+                onCheckedChange = {acceptTerms = it}
+            )
+            Button(onClick = {showTerms = true}){
+                Text("Ver términos y condiciones")
+            }
+        }
 
         Button(
             enabled = fullName.isNotEmpty()
@@ -153,5 +173,32 @@ fun RegisterScreen(navController: NavController) {
         ) {
             Text("Registrar")
         }
+
+        if(showTerms){
+            AlertDialog(
+                onDismissRequest = { showTerms = false },
+                confirmButton = {
+                    Button(onClick = { showTerms = false }) {
+                        Text("Cerrar")
+                    }
+                },
+                title = { Text("Términos y condiciones") },
+                text = {
+                    //WebView
+                    AndroidView(
+                        factory = { context ->
+                            WebView(context).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                loadUrl("https://www.privacypolicies.com/live/19ab97f3-7b8a-46bf-a119-5864ce4aa374")
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            )
+        }
+
+
     }
 }
